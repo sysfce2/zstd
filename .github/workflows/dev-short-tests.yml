@@ -709,26 +709,23 @@ jobs:
       run: |
         sde-external-9.33.0-2024-01-07-lin/sde -cet -cet-raise 0 -cet-endbr-exe -cet-stderr -cet-abort -- ./zstd -b3
 
+  icx:
+    # install instructions: https://www.intel.com/content/www/us/en/docs/oneapi/installation-guide-linux/2025-0/apt-005.html
+    name: icx-check
+    runs-on: ubuntu-latest
+    steps:
+    - name: install icx
+      run: |
+        # download the key to system keyring
+        wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
+        | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
 
-# Failing tests, for reference
-
-# icc tests are currently failing on Github Actions, likely to issues during installation stage
-#
-#  icc:
-#    name: icc-check
-#    runs-on: ubuntu-latest
-#    steps:
-#    - name: install icc
-#      run: |
-#        export DEBIAN_FRONTEND=noninteractive
-#        sudo apt-get -qqq update
-#        sudo apt-get install -y wget build-essential pkg-config cmake ca-certificates gnupg
-#        sudo wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
-#        sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
-#        sudo add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
-#        sudo apt-get update
-#        sudo apt-get install -y intel-basekit intel-hpckit
-#    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # tag=v4.1.1
-#    - name: make check
-#      run: |
-#        make CC=/opt/intel/oneapi/compiler/latest/linux/bin/intel64/icc check
+        # add signed entry to apt sources and configure the APT client to use Intel repository:
+        echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+        sudo apt-get update
+        sudo apt-get install -y intel-basekit intel-hpckit
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # tag=v4.1.1
+    - name: make check
+      run: |
+        source /opt/intel/oneapi/setvars.sh
+        make CC=icx check
