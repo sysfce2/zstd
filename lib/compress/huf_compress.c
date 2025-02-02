@@ -379,7 +379,7 @@ static U32 HUF_setMaxHeight(nodeElt* huffNode, U32 lastNonNull, U32 targetNbBits
     /* early exit : no elt > targetNbBits, so the tree is already valid. */
     if (largestBits <= targetNbBits) return largestBits;
 
-    DEBUGLOG(5, "HUF_setMaxHeight (targetNbBits = %u)", targetNbBits);
+    DEBUGLOG(6, "HUF_setMaxHeight (targetNbBits = %u)", targetNbBits);
 
     /* there are several too large elements (at least >= 2) */
     {   int totalCost = 0;
@@ -685,7 +685,7 @@ static int HUF_buildTree(nodeElt* huffNode, U32 maxSymbolValue)
     int lowS, lowN;
     int nodeNb = STARTNODE;
     int n, nodeRoot;
-    DEBUGLOG(5, "HUF_buildTree (alphabet size = %u)", maxSymbolValue + 1);
+    DEBUGLOG(6, "HUF_buildTree (alphabet size = %u)", maxSymbolValue + 1);
     /* init for parents */
     nonNullRank = (int)maxSymbolValue;
     while(huffNode[nonNullRank].count == 0) nonNullRank--;
@@ -764,7 +764,7 @@ HUF_buildCTable_wksp(HUF_CElt* CTable, const unsigned* count, U32 maxSymbolValue
 
     HUF_STATIC_ASSERT(HUF_CTABLE_WORKSPACE_SIZE == sizeof(HUF_buildCTable_wksp_tables));
 
-    DEBUGLOG(5, "HUF_buildCTable_wksp (alphabet size = %u)", maxSymbolValue+1);
+    DEBUGLOG(6, "HUF_buildCTable_wksp (alphabet size = %u)", maxSymbolValue+1);
 
     /* safety checks */
     if (wkspSize < sizeof(HUF_buildCTable_wksp_tables))

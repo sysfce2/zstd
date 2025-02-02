@@ -124,7 +124,7 @@ static U32 ZSTD_scaleStats(unsigned* table, U32 lastEltIndex, U32 logTarget)
 {
     U32 const prevsum = sum_u32(table, lastEltIndex+1);
     U32 const factor = prevsum >> logTarget;
-    DEBUGLOG(5, "ZSTD_scaleStats (nbElts=%u, target=%u)", (unsigned)lastEltIndex+1, (unsigned)logTarget);
+    DEBUGLOG(6, "ZSTD_scaleStats (nbElts=%u, target=%u)", (unsigned)lastEltIndex+1, (unsigned)logTarget);
     assert(logTarget < 30);
     if (factor <= 1) return prevsum;
     return ZSTD_downscaleStats(table, lastEltIndex, ZSTD_highbit32(factor), base_1guaranteed);
