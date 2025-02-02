@@ -1019,6 +1019,7 @@ ZSTDMT_createCCtx_advanced_internal(unsigned nbWorkers, ZSTD_customMem cMem, ZST
         ZSTDMT_freeCCtx(mtctx);
         return NULL;
     }
+    POOL_setExtCond(mtctx->factory, &mtctx->flushMutex, &mtctx->flushCond);
     DEBUGLOG(3, "mt_cctx created, for %u threads", nbWorkers);
     return mtctx;
 }
@@ -1350,10 +1351,12 @@ size_t ZSTDMT_initCStream_internal(
          * for the overlap (if > 0), then one to fill which doesn't overlap
          * with the LDM window.
          */
-        size_t const nbSlackBuffers = 2 + (mtctx->targetPrefixSize > 0);
+        size_t const nbWorkers = MAX((size_t)mtctx->params.nbWorkers, 1);
+        size_t const minSlackBuffers = 2 + (mtctx->targetPrefixSize > 0);
+        size_t const extraSlackBuffers = MAX(1, nbWorkers/4);  /* for fluidity, when jobs are completed out of order */
+        size_t const nbSlackBuffers = minSlackBuffers + extraSlackBuffers;
         size_t const slackSize = mtctx->targetJobSize * nbSlackBuffers;
         /* Compute the total size, and always have enough slack */
-        size_t const nbWorkers = MAX(mtctx->params.nbWorkers, 1);
         size_t const sectionsSize = mtctx->targetJobSize * nbWorkers;
         size_t const capacity = MAX(windowSize, sectionsSize) + slackSize;
         if (mtctx->roundBuff.capacity < capacity) {
@@ -1431,17 +1434,6 @@ static void ZSTDMT_writeLastEmptyBlock(ZSTDMT_jobDescription* job)
     assert(job->consumed == 0);
 }
 
-/* @returns 1 if there is anything ready to flush */
-static int ZSTDMT_anythingToFlush(const ZSTDMT_CCtx* mtctx)
-{
-    unsigned const wJobID = mtctx->doneJobID & mtctx->jobIDMask;
-    int r = 0;
-    ZSTD_PTHREAD_MUTEX_LOCK(&mtctx->jobs[wJobID].job_mutex);
-    r = mtctx->jobs[wJobID].dstFlushed < mtctx->jobs[wJobID].cSize;
-    ZSTD_pthread_mutex_unlock(&mtctx->jobs[wJobID].job_mutex);
-    return r;
-}
-
 static size_t ZSTDMT_createCompressionJob(ZSTDMT_CCtx* mtctx, size_t srcSize, ZSTD_EndDirective endOp)
 {
     unsigned const jobID = mtctx->nextJobID & mtctx->jobIDMask;
@@ -1513,23 +1505,15 @@ static size_t ZSTDMT_createCompressionJob(ZSTDMT_CCtx* mtctx, size_t srcSize, ZS
                 mtctx->nextJobID,
                 jobID);
 
-    if (1 || ZSTDMT_anythingToFlush(mtctx)) {
-        if (POOL_tryAdd(mtctx->factory, ZSTDMT_compressionJob, &mtctx->jobs[jobID])) {
-            mtctx->nextJobID++;
-            mtctx->jobReady = 0;
-            return 1;
-        } else {
-            DEBUGLOG(5, "ZSTDMT_createCompressionJob: no worker currently available for job %u", mtctx->nextJobID);
-            mtctx->jobReady = 1;
-            return 0;
-        }
-    } else {
-        /* block here, wait for next available job */
-        POOL_add(mtctx->factory, ZSTDMT_compressionJob, &mtctx->jobs[jobID]);
+    if (POOL_tryAdd(mtctx->factory, ZSTDMT_compressionJob, &mtctx->jobs[jobID])) {
         mtctx->nextJobID++;
         mtctx->jobReady = 0;
+        return 1;
     }
-    return 1;
+
+    DEBUGLOG(5, "ZSTDMT_createCompressionJob: no worker currently available for job %u", mtctx->nextJobID);
+    mtctx->jobReady = 1;
+    return 0;
 }
 
 
@@ -1556,17 +1540,20 @@ static size_t ZSTDMT_flushProduced(ZSTDMT_CCtx* mtctx, ZSTD_outBuffer* output, u
                             mtctx->doneJobID, (U32)mtctx->jobs[wJobID].consumed, (U32)mtctx->jobs[wJobID].src.size);
                 break;
             }
-            DEBUGLOG(5, "waiting for something to flush from job %u (currently flushed: %u bytes)",
-                        mtctx->doneJobID, (U32)mtctx->jobs[wJobID].dstFlushed);
+            DEBUGLOG(5, "waiting for something to flush from job %u (%u input left)",
+                        mtctx->doneJobID, (unsigned)(mtctx->jobs[wJobID].src.size - mtctx->jobs[wJobID].consumed));
             if (mtctx->jobs[wJobID].flush_mutex == NULL) {
                 mtctx->jobs[wJobID].flush_mutex = &mtctx->flushMutex;
                 mtctx->jobs[wJobID].flush_cond = &mtctx->flushCond;
             }
-            DEBUGLOG(6, "waiting to flush something (%zu left)",  mtctx->jobs[wJobID].src.size - mtctx->jobs[wJobID].consumed);
             ZSTD_pthread_mutex_unlock(&mtctx->jobs[wJobID].job_mutex);
+            /* note: if a job was completed between POOL_tryAdd() and this waiting condition,
+             * the signal, which was already issued, will be lost.
+             * It just reduces an opportunity to start a new job immediately */
             ZSTD_PTHREAD_COND_WAIT(&mtctx->flushCond, &mtctx->flushMutex);  /* block waiting for something to flush */
             ZSTD_PTHREAD_MUTEX_LOCK(&mtctx->jobs[wJobID].job_mutex);
-            DEBUGLOG(6, "condition triggered: let's flush something (%zu bytes)", mtctx->jobs[wJobID].cSize - mtctx->jobs[wJobID].dstFlushed);
+            DEBUGLOG(6, "flushCond triggered: let's flush something (%zu bytes)", mtctx->jobs[wJobID].cSize - mtctx->jobs[wJobID].dstFlushed);
+            break; /* can be triggered with nothing to flush, when a job was just completed */
     }   }
 
     /* try to flush something */

@@ -15,6 +15,7 @@
 #include "zstd_deps.h"
 #define ZSTD_STATIC_LINKING_ONLY   /* ZSTD_customMem */
 #include "../zstd.h"
+#include "threading.h" /* ZSTD_pthread_mutex_t, ZSTD_pthread_cond_t */
 
 typedef struct POOL_ctx_s POOL_ctx;
 
@@ -35,11 +36,6 @@ POOL_ctx* POOL_create_advanced(size_t numThreads, size_t queueSize,
 void POOL_free(POOL_ctx* ctx);
 
 
-/*! POOL_joinJobs() :
- *  Waits for all queued jobs to finish executing.
- */
-void POOL_joinJobs(POOL_ctx* ctx);
-
 /*! POOL_resize() :
  *  Expands or shrinks pool's number of threads.
  *  This is more efficient than releasing + creating a new context,
@@ -57,6 +53,13 @@ int POOL_resize(POOL_ctx* ctx, size_t numThreads);
  */
 size_t POOL_sizeof(const POOL_ctx* ctx);
 
+
+/*! POOL_sizeof() :
+ * Pass a condition (and its associated mutex) to set whenever a job slot get freed.
+ * Note: can pass NULL to disable currently set condition.
+ */
+void POOL_setExtCond(POOL_ctx* ctx, ZSTD_pthread_mutex_t* mutex, ZSTD_pthread_cond_t* cond);
+
 /*! POOL_function :
  *  The function type that can be added to a thread pool.
  */
@@ -70,12 +73,22 @@ typedef void (*POOL_function)(void*);
  */
 void POOL_add(POOL_ctx* ctx, POOL_function function, void* opaque);
 
-
 /*! POOL_tryAdd() :
  *  Add the job `function(opaque)` to thread pool _if_ a queue slot is available.
  *  Returns immediately even if not (does not block).
  * @return : 1 if successful, 0 if not.
  */
 int POOL_tryAdd(POOL_ctx* ctx, POOL_function function, void* opaque);
+
+/*! POOL_canAcceptJob() :
+ *  Tells if will be able to accept a new job without blocking.
+ * @return : 1 if true, 0 if not (queue full)
+ */
+int POOL_canAcceptJob(POOL_ctx* ctx);
+
+/*! POOL_joinJobs() :
+ *  Waits for all queued jobs to finish executing.
+ */
+void POOL_joinJobs(POOL_ctx* ctx);
 
 #endif

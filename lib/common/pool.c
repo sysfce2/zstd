@@ -57,6 +57,11 @@ struct POOL_ctx_s {
     ZSTD_pthread_cond_t queuePopCond;
     /* Indicates if the queue is shutting down */
     int shutdown;
+
+    /* external mutex for the external condition */
+    ZSTD_pthread_mutex_t* extMutex;
+    /* external condition variable to set when a job is completed */
+    ZSTD_pthread_cond_t* extCond;
 };
 
 /* POOL_thread() :
@@ -89,7 +94,15 @@ static void* POOL_thread(void* opaque) {
             ctx->queueEmpty = (ctx->queueHead == ctx->queueTail);
             /* Unlock the mutex, signal a pusher, and run the job */
             ZSTD_pthread_cond_signal(&ctx->queuePushCond);
-            ZSTD_pthread_mutex_unlock(&ctx->queueMutex);
+            if (ctx->extMutex != NULL) {
+                assert(ctx->extCond != NULL);
+                ZSTD_pthread_mutex_unlock(&ctx->queueMutex);
+                ZSTD_pthread_mutex_lock(ctx->extMutex);
+                ZSTD_pthread_cond_signal(ctx->extCond);
+                ZSTD_pthread_mutex_unlock(ctx->extMutex);
+            } else {
+                ZSTD_pthread_mutex_unlock(&ctx->queueMutex);
+            }
 
             job.function(job.opaque);
 
@@ -97,7 +110,15 @@ static void* POOL_thread(void* opaque) {
             ZSTD_pthread_mutex_lock(&ctx->queueMutex);
             ctx->numThreadsBusy--;
             ZSTD_pthread_cond_signal(&ctx->queuePushCond);
-            ZSTD_pthread_mutex_unlock(&ctx->queueMutex);
+            if (ctx->extMutex != NULL) {
+                assert(ctx->extCond != NULL);
+                ZSTD_pthread_mutex_unlock(&ctx->queueMutex);
+                ZSTD_pthread_mutex_lock(ctx->extMutex);
+                ZSTD_pthread_cond_signal(ctx->extCond);
+                ZSTD_pthread_mutex_unlock(ctx->extMutex);
+            } else {
+                ZSTD_pthread_mutex_unlock(&ctx->queueMutex);
+            }
         }
     }  /* for (;;) */
     assert(0);  /* Unreachable */
@@ -138,6 +159,8 @@ POOL_ctx* POOL_create_advanced(size_t numThreads, size_t queueSize,
         error |= ZSTD_pthread_cond_init(&ctx->queuePopCond, NULL);
         if (error) { POOL_free(ctx); return NULL; }
     }
+    ctx->extMutex = NULL;
+    ctx->extCond = NULL;
     ctx->shutdown = 0;
     /* Allocate space for the thread handles */
     ctx->threads = (ZSTD_pthread_t*)ZSTD_customCalloc(numThreads * sizeof(ZSTD_pthread_t), customMem);
@@ -210,6 +233,14 @@ size_t POOL_sizeof(const POOL_ctx* ctx) {
         + ctx->threadCapacity * sizeof(ZSTD_pthread_t);
 }
 
+void POOL_setExtCond(POOL_ctx* ctx, ZSTD_pthread_mutex_t* mutex, ZSTD_pthread_cond_t* cond)
+{
+    ZSTD_pthread_mutex_lock(&ctx->queueMutex);
+    ctx->extMutex = mutex;
+    ctx->extCond = cond;
+    ZSTD_pthread_mutex_unlock(&ctx->queueMutex);
+    return;
+}
 
 /* @return : 0 on success, 1 on error */
 static int POOL_resize_internal(POOL_ctx* ctx, size_t numThreads)
@@ -309,6 +340,14 @@ int POOL_tryAdd(POOL_ctx* ctx, POOL_function function, void* opaque)
     return 1;
 }
 
+int POOL_canAcceptJob(POOL_ctx* ctx)
+{
+    int r;
+    ZSTD_pthread_mutex_lock(&ctx->queueMutex);
+    r = !isQueueFull(ctx);
+    ZSTD_pthread_mutex_unlock(&ctx->queueMutex);
+    return r;
+}
 
 #else  /* ZSTD_MULTITHREAD  not defined */
 
@@ -366,6 +405,12 @@ size_t POOL_sizeof(const POOL_ctx* ctx) {
     if (ctx==NULL) return 0;  /* supports sizeof NULL */
     assert(ctx == &g_poolCtx);
     return sizeof(*ctx);
+}
+
+void POOL_setExtCond(POOL_ctx* ctx, ZSTD_pthread_mutex_t* mutex, ZSTD_pthread_cond_t* cond)
+{
+    (void)ctx; (void)mutex; (void)cond;
+    return;
 }
 
 #endif  /* ZSTD_MULTITHREAD */
