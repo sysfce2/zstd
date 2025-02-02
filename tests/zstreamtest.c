@@ -2900,7 +2900,7 @@ static int fuzzerTests_newAPI(U32 seed, int nbTests, int startTest,
         U32 lseed;
         int opaqueAPI;
         const BYTE* srcBuffer;
-        size_t totalTestSize, totalGenSize, cSize;
+        size_t totalTestSize, totalGenSize, cSize=0;
         XXH64_state_t xxhState;
         U64 crcOrig;
         U32 resetAllowed = 1;

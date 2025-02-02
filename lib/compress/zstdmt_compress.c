@@ -837,6 +837,7 @@ _endJob:
     job->cSize += lastCBlockSize;
     job->consumed = job->src.size;  /* when job->consumed == job->src.size , compression job is presumed completed */
     if (job->flush_mutex != NULL) {
+        assert(job->flush_cond != NULL);
         ZSTD_pthread_mutex_unlock(&job->job_mutex);
         ZSTD_PTHREAD_MUTEX_LOCK(job->flush_mutex);
         ZSTD_pthread_cond_signal(job->flush_cond);   /* warns some more data is ready to be flushed */
@@ -1603,8 +1604,6 @@ static size_t ZSTDMT_flushProduced(ZSTDMT_CCtx* mtctx, ZSTD_outBuffer* output, u
                 DEBUGLOG(5, "dstBuffer released");
                 mtctx->jobs[wJobID].dstBuff = g_nullBuffer;
                 mtctx->jobs[wJobID].cSize = 0;   /* ensure this job slot is considered "not started" in future check */
-                mtctx->jobs[wJobID].flush_mutex = NULL;
-                mtctx->jobs[wJobID].flush_cond = NULL;
                 mtctx->consumed += srcSize;
                 mtctx->produced += cSize;
                 mtctx->doneJobID++;
