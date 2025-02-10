@@ -577,7 +577,7 @@ typedef enum {
 
 typedef size_t (*ZSTD_BlockCompressor_f) (
         ZSTD_MatchState_t* bs, SeqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
-        void const* src, size_t srcSize);
+        void const* src, size_t blockSize, size_t srcBufSize);
 ZSTD_BlockCompressor_f ZSTD_selectBlockCompressor(ZSTD_strategy strat, ZSTD_ParamSwitch_e rowMatchfinderMode, ZSTD_dictMode_e dictMode);
 
 
@@ -1058,7 +1058,7 @@ MEM_STATIC U32 ZSTD_window_isEmpty(ZSTD_window_t const window)
  * ZSTD_window_hasExtDict():
  * Returns non-zero if the window has a non-empty extDict.
  */
-MEM_STATIC U32 ZSTD_window_hasExtDict(ZSTD_window_t const window)
+MEM_STATIC int ZSTD_window_hasExtDict(ZSTD_window_t const window)
 {
     return window.lowLimit < window.dictLimit;
 }

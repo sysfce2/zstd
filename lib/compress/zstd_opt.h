@@ -23,13 +23,13 @@ void ZSTD_updateTree(ZSTD_MatchState_t* ms, const BYTE* ip, const BYTE* iend);
 #ifndef ZSTD_EXCLUDE_BTOPT_BLOCK_COMPRESSOR
 size_t ZSTD_compressBlock_btopt(
         ZSTD_MatchState_t* ms, SeqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
-        void const* src, size_t srcSize);
+        void const* src, size_t blockSize, size_t srcBufSize);
 size_t ZSTD_compressBlock_btopt_dictMatchState(
         ZSTD_MatchState_t* ms, SeqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
-        void const* src, size_t srcSize);
+        void const* src, size_t blockSize, size_t srcBufSize);
 size_t ZSTD_compressBlock_btopt_extDict(
         ZSTD_MatchState_t* ms, SeqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
-        void const* src, size_t srcSize);
+        void const* src, size_t blockSize, size_t srcBufSize);
 
 #define ZSTD_COMPRESSBLOCK_BTOPT ZSTD_compressBlock_btopt
 #define ZSTD_COMPRESSBLOCK_BTOPT_DICTMATCHSTATE ZSTD_compressBlock_btopt_dictMatchState
@@ -43,20 +43,20 @@ size_t ZSTD_compressBlock_btopt_extDict(
 #ifndef ZSTD_EXCLUDE_BTULTRA_BLOCK_COMPRESSOR
 size_t ZSTD_compressBlock_btultra(
         ZSTD_MatchState_t* ms, SeqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
-        void const* src, size_t srcSize);
+        void const* src, size_t blockSize, size_t srcBufSize);
 size_t ZSTD_compressBlock_btultra_dictMatchState(
         ZSTD_MatchState_t* ms, SeqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
-        void const* src, size_t srcSize);
+        void const* src, size_t blockSize, size_t srcBufSize);
 size_t ZSTD_compressBlock_btultra_extDict(
         ZSTD_MatchState_t* ms, SeqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
-        void const* src, size_t srcSize);
+        void const* src, size_t blockSize, size_t srcBufSize);
 
         /* note : no btultra2 variant for extDict nor dictMatchState,
          * because btultra2 is not meant to work with dictionaries
          * and is only specific for the first block (no prefix) */
 size_t ZSTD_compressBlock_btultra2(
         ZSTD_MatchState_t* ms, SeqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
-        void const* src, size_t srcSize);
+        void const* src, size_t blockSize, size_t srcBufSize);
 
 #define ZSTD_COMPRESSBLOCK_BTULTRA ZSTD_compressBlock_btultra
 #define ZSTD_COMPRESSBLOCK_BTULTRA_DICTMATCHSTATE ZSTD_compressBlock_btultra_dictMatchState

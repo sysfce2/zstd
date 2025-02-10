@@ -15,16 +15,17 @@
 #include "zstd_compress_internal.h"
 
 void ZSTD_fillHashTable(ZSTD_MatchState_t* ms,
-                        void const* end, ZSTD_dictTableLoadMethod_e dtlm,
+                  const void* end, ZSTD_dictTableLoadMethod_e dtlm,
                         ZSTD_tableFillPurpose_e tfp);
+
 size_t ZSTD_compressBlock_fast(
         ZSTD_MatchState_t* ms, SeqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
-        void const* src, size_t srcSize);
+        void const* src, size_t blockSize, size_t srcBufSize);
 size_t ZSTD_compressBlock_fast_dictMatchState(
         ZSTD_MatchState_t* ms, SeqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
-        void const* src, size_t srcSize);
+        void const* src, size_t blockSize, size_t srcBufSize);
 size_t ZSTD_compressBlock_fast_extDict(
         ZSTD_MatchState_t* ms, SeqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
-        void const* src, size_t srcSize);
+        void const* src, size_t blockSize, size_t srcBufSize);
 
 #endif /* ZSTD_FAST_H */

@@ -63,7 +63,7 @@ size_t ZSTD_ldm_generateSequences(
 size_t ZSTD_ldm_blockCompress(RawSeqStore_t* rawSeqStore,
             ZSTD_MatchState_t* ms, SeqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
             ZSTD_ParamSwitch_e useRowMatchFinder,
-            void const* src, size_t srcSize);
+            void const* src, size_t blockSize, size_t srcBufSize);
 
 /**
  * ZSTD_ldm_skipSequences():

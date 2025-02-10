@@ -442,7 +442,7 @@ ZSTD_GEN_FAST_FN(noDict, 7, 0)
 
 size_t ZSTD_compressBlock_fast(
         ZSTD_MatchState_t* ms, SeqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
-        void const* src, size_t srcSize)
+        void const* src, size_t srcSize, size_t srcBufSize)
 {
     U32 const mml = ms->cParams.minMatch;
     /* use cmov when "candidate in range" branch is likely unpredictable */
@@ -685,7 +685,7 @@ ZSTD_GEN_FAST_FN(dictMatchState, 7, 0)
 
 size_t ZSTD_compressBlock_fast_dictMatchState(
         ZSTD_MatchState_t* ms, SeqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
-        void const* src, size_t srcSize)
+        void const* src, size_t srcSize, size_t srcBufSize)
 {
     U32 const mls = ms->cParams.minMatch;
     assert(ms->dictMatchState != NULL);
@@ -759,7 +759,7 @@ size_t ZSTD_compressBlock_fast_extDict_generic(
 
     /* switch to "regular" variant if extDict is invalidated due to maxDistance */
     if (prefixStartIndex == dictStartIndex)
-        return ZSTD_compressBlock_fast(ms, seqStore, rep, src, srcSize);
+        return ZSTD_compressBlock_fast(ms, seqStore, rep, src, srcSize, srcSize);
 
     {   U32 const curr = (U32)(ip0 - base);
         U32 const maxRep = curr - dictStartIndex;
@@ -966,7 +966,7 @@ ZSTD_GEN_FAST_FN(extDict, 7, 0)
 
 size_t ZSTD_compressBlock_fast_extDict(
         ZSTD_MatchState_t* ms, SeqStore_t* seqStore, U32 rep[ZSTD_REP_NUM],
-        void const* src, size_t srcSize)
+        void const* src, size_t srcSize, size_t srcBufSize)
 {
     U32 const mls = ms->cParams.minMatch;
     assert(ms->dictMatchState == NULL);
