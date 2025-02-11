@@ -496,8 +496,10 @@ jobs:
       run: |
         make clean
         LDFLAGS="-static" CC=$XCC QEMU_SYS=$XEMU make -j check
-        make clean
-        LDFLAGS="-static -z force-bti" MOREFLAGS="-mbranch-protection=standard" CC=$XCC QEMU_SYS=$XEMU make check V=1
+# This test is only compatible with standard libraries that support BTI (Branch Target Identification).
+# Unfortunately, the standard library provided on Ubuntu 24.04 does not have this feature enabled.
+#        make clean
+#        LDFLAGS="-static -z force-bti" MOREFLAGS="-mbranch-protection=standard" CC=$XCC QEMU_SYS=$XEMU make check V=1
     - name: PPC
       if: ${{ matrix.name == 'PPC' }}
       run: |
