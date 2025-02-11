@@ -37,18 +37,6 @@ jobs:
         APT_PACKAGES="gcc-multilib" make apt-install
         CFLAGS="-m32 -O1 -fstack-protector" make check V=1
 
-  check-x32:
-    runs-on: ubuntu-lastest  # ubuntu-latest == ubuntu-22.04 have issues currently with x32
-    steps:
-    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # tag=v4.1.1
-    - name: make check on x32 ABI # https://en.wikipedia.org/wiki/X32_ABI
-      env:
-        CHECK_CONSTRAINED_MEM: true
-      run: |
-        sudo apt update
-        APT_PACKAGES="gcc-multilib" make apt-install
-        CFLAGS="-mx32 -O1 -fstack-protector" make check V=1
-
   build-c89:
     runs-on: ubuntu-latest
     steps:
