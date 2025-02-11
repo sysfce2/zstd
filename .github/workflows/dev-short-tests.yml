@@ -495,9 +495,9 @@ jobs:
       if: ${{ matrix.name == 'ARM64' }}
       run: |
         make clean
-        CFLAGS="-march=armv8-a -Og" LDFLAGS="-static -z force-bti" MOREFLAGS="-mbranch-protection=standard" CC=$XCC QEMU_SYS=$XEMU make check
+        LDFLAGS="-static" CC=$XCC QEMU_SYS=$XEMU make -j check
         make clean
-        CFLAGS="-march=armv8-a -Og" LDFLAGS="-static" CC=$XCC QEMU_SYS=$XEMU make check
+        LDFLAGS="-static -z force-bti" MOREFLAGS="-mbranch-protection=standard" CC=$XCC QEMU_SYS=$XEMU make check V=1
     - name: PPC
       if: ${{ matrix.name == 'PPC' }}
       run: |
