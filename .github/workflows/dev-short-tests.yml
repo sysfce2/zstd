@@ -37,18 +37,6 @@ jobs:
         APT_PACKAGES="gcc-multilib" make apt-install
         CFLAGS="-m32 -O1 -fstack-protector" make check V=1
 
-  check-x32:
-    runs-on: ubuntu-20.04  # ubuntu-latest == ubuntu-22.04 have issues currently with x32
-    steps:
-    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # tag=v4.1.1
-    - name: make check on x32 ABI # https://en.wikipedia.org/wiki/X32_ABI
-      env:
-        CHECK_CONSTRAINED_MEM: true
-      run: |
-        sudo apt update
-        APT_PACKAGES="gcc-multilib" make apt-install
-        CFLAGS="-mx32 -O1 -fstack-protector" make check V=1
-
   build-c89:
     runs-on: ubuntu-latest
     steps:
@@ -467,13 +455,13 @@ jobs:
 
   qemu-consistency:
     name: QEMU ${{ matrix.name }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false  # 'false' means Don't stop matrix workflows even if some matrix failed.
       matrix:
         include: [
           { name: ARM,      xcc_pkg: gcc-arm-linux-gnueabi,     xcc: arm-linux-gnueabi-gcc,     xemu_pkg: qemu-system-arm,    xemu: qemu-arm-static     },
-          { name: ARM64,    xcc_pkg: gcc-aarch64-linux-gnu,     xcc: aarch64-linux-gnu-gcc,     xemu_pkg: qemu-system-arm,    xemu: qemu-aarch64-static },
+          { name: ARM64,    xcc_pkg: gcc-aarch64-linux-gnu,     xcc: aarch64-linux-gnu-gcc,     xemu_pkg: qemu-system-aarch64,xemu: qemu-aarch64-static },
           { name: PPC,      xcc_pkg: gcc-powerpc-linux-gnu,     xcc: powerpc-linux-gnu-gcc,     xemu_pkg: qemu-system-ppc,    xemu: qemu-ppc-static     },
           { name: PPC64LE,  xcc_pkg: gcc-powerpc64le-linux-gnu, xcc: powerpc64le-linux-gnu-gcc, xemu_pkg: qemu-system-ppc,    xemu: qemu-ppc64le-static },
           { name: S390X,    xcc_pkg: gcc-s390x-linux-gnu,       xcc: s390x-linux-gnu-gcc,       xemu_pkg: qemu-system-s390x,  xemu: qemu-s390x-static   },
@@ -506,8 +494,12 @@ jobs:
     - name: ARM64
       if: ${{ matrix.name == 'ARM64' }}
       run: |
-        LDFLAGS="-static -z force-bti" MOREFLAGS="-mbranch-protection=standard" CC=$XCC QEMU_SYS=$XEMU make clean check
-        LDFLAGS="-static" CC=$XCC QEMU_SYS=$XEMU make clean check
+        make clean
+        LDFLAGS="-static" CC=$XCC QEMU_SYS=$XEMU make -j check
+# This test is only compatible with standard libraries that support BTI (Branch Target Identification).
+# Unfortunately, the standard library provided on Ubuntu 24.04 does not have this feature enabled.
+#        make clean
+#        LDFLAGS="-static -z force-bti" MOREFLAGS="-mbranch-protection=standard" CC=$XCC QEMU_SYS=$XEMU make check V=1
     - name: PPC
       if: ${{ matrix.name == 'PPC' }}
       run: |
