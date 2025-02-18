@@ -97,7 +97,7 @@ jobs:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # tag=v4.1.1
       with:
         path: "${{ env.SRC_DIR }}"
-    - uses: ilammy/msvc-dev-cmd@v1
+    - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       if: ${{ matrix.generator == 'NMake Makefiles' }}
     - name: cmake build on a source directory with spaces
       run: |
